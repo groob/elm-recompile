@@ -1,0 +1,3 @@
+package: github.com/groob/elm-recompile
+import:
+- package: gopkg.in/fsnotify.v1
