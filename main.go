@@ -2,8 +2,10 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 
@@ -16,8 +18,24 @@ var (
 )
 
 func main() {
+	var (
+		flPort    = flag.String("port", "3000", "http port to listen to, defaults to 3000")
+		flVersion = flag.Bool("version", false, "print version information")
+	)
+	flag.Parse()
+	if *flVersion {
+		fmt.Printf("elm-recompile - Version %s\n", version)
+		fmt.Printf("Git Hash - %s\n", gitHash)
+		os.Exit(0)
+	}
+	go serve(*flPort)
 	inFile := os.Args[1]
 	reCompile(inFile)
+}
+
+func serve(port string) {
+	port = ":" + port
+	log.Fatal(http.ListenAndServe(port, http.FileServer(http.Dir("."))))
 }
 
 func reCompile(path string) {
