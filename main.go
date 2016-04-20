@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"gopkg.in/fsnotify.v1"
 )
@@ -48,25 +49,50 @@ func reCompile(path string) {
 	done := make(chan bool)
 	go func() {
 		prev := []byte("")
+		// first time app runs
+		output := compile(path)
+		prev = check(output, prev)
 		for {
 			select {
 			case <-watcher.Events:
 				output := compile(path)
-				if !bytes.Equal(output, prev) {
-					clear()
-					fmt.Println(string(output))
-					prev = output
-				}
+				prev = check(output, prev)
 			case err := <-watcher.Errors:
 				log.Println("error:", err)
 			}
 		}
 	}()
-	err = watcher.Add(path)
+	err = addFoldersInPath(filepath.Dir(path), watcher)
 	if err != nil {
 		log.Fatal(err)
 	}
+	// err = watcher.Add(filepath.Dir(path))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 	<-done
+}
+
+func addFoldersInPath(location string, watcher *fsnotify.Watcher) error {
+	err := filepath.Walk(location, func(path string, info os.FileInfo, _ error) error {
+		if info.IsDir() {
+			fmt.Println(path)
+			return watcher.Add(path)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func check(in, prev []byte) []byte {
+	if !bytes.Equal(in, prev) {
+		clear()
+		fmt.Println(string(in))
+		return in
+	}
+	return prev
 }
 
 func compile(path string) []byte {
